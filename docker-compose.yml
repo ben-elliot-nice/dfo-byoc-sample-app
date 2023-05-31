@@ -16,12 +16,12 @@ services:
       target: development
       args:
         - BUILD_CONTEXT=backend
-    command: yarn backend start:dev
+    command: yarn start:dev
     ports:
       - "3000:3000"
     user: "node:node"
     volumes: 
-      - ./packages/backend:/usr/src/app/packages/backend
+      - ./:/usr/src/app/
     depends_on:
       - db
 volumes:
