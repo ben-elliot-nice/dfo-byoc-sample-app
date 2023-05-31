@@ -1,0 +1,29 @@
+version: '3'
+services:
+  db:
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - '5432:5432'
+    volumes: 
+      - db:/var/lib/postgresql/data
+  backend:
+    build: 
+      context: .
+      target: development
+      args:
+        - BUILD_CONTEXT=backend
+    command: yarn backend start:dev
+    ports:
+      - "3000:3000"
+    user: "node:node"
+    volumes: 
+      - ./packages/backend:/usr/src/app/packages/backend
+    depends_on:
+      - db
+volumes:
+  db:
+    driver: local
