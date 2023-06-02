@@ -1,6 +1,12 @@
 import { Result } from '@/utils/result';
 import { HttpService } from '@nestjs/axios';
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AxiosRequestConfig } from 'axios';
@@ -27,7 +33,7 @@ export class VerificationService {
 
   private async getVerificationByToken(
     token: string,
-  ): Promise<Result<Verification, Error>> {
+  ): Promise<Result<Verification, HttpException>> {
     const verification: Verification =
       await this.verificationRepository.findOne({
         where: { token },
@@ -39,7 +45,13 @@ export class VerificationService {
     if (verification) {
       return Result.ok(verification);
     } else {
-      return Result.error(new Error(`No verification token '${token}' found`));
+      Logger.warn(`Rejecting verification request, token ${token} not found`);
+      return Result.error(
+        new HttpException(
+          `No verification token '${token}' found`,
+          HttpStatus.BAD_REQUEST,
+        ),
+      );
     }
   }
 
@@ -88,6 +100,7 @@ export class VerificationService {
       await this.http.axiosRef.request(config);
       return Result.ok(null);
     } catch (error) {
+      Logger.warn(`Failed to send welcome email to ${email}`);
       return Result.error(
         new HttpException(
           `Failed to send welcome email: ${error.message}`,
@@ -111,9 +124,19 @@ export class VerificationService {
     }
   }
 
-  private validateIssuedTime(verification: Verification): Result<null, Error> {
+  private validateIssuedTime(
+    verification: Verification,
+  ): Result<null, HttpException> {
     if (new Date().getTime() - verification.issuedAt.getTime() > 86400000) {
-      return Result.error(new Error('Verification Token Timed Out'));
+      Logger.warn(
+        `Rejecting verification request, token ${verification.token} issued at ${verification.issuedAt} is too old`,
+      );
+      return Result.error(
+        new HttpException(
+          'Verification Token Timed Out',
+          HttpStatus.BAD_REQUEST,
+        ),
+      );
     } else {
       return Result.ok(null);
     }
@@ -143,17 +166,13 @@ export class VerificationService {
 
   public async verify(body: VerifyDto): Promise<Result<User, HttpException>> {
     const { token } = body;
+    Logger.debug(`Executing verification request for token: ${token}`);
 
     // Check to see if there is an active verification for this token
     const getVerificationResult = await this.getVerificationByToken(token);
 
     if (getVerificationResult.isError()) {
-      return Result.error(
-        new HttpException(
-          getVerificationResult.error.message,
-          HttpStatus.BAD_REQUEST,
-        ),
-      );
+      return Result.error(getVerificationResult.error);
     }
 
     // Check verification is within allowed time
@@ -161,12 +180,7 @@ export class VerificationService {
     const validateIssuedTimeResult = this.validateIssuedTime(verification);
 
     if (validateIssuedTimeResult.isError()) {
-      return Result.error(
-        new HttpException(
-          validateIssuedTimeResult.error.message,
-          HttpStatus.BAD_REQUEST,
-        ),
-      );
+      return Result.error(validateIssuedTimeResult.error);
     }
 
     // Update relevant table details.

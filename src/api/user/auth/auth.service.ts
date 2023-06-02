@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Inject, Injectable } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Inject,
+  Injectable,
+  Logger,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '@/api/user/user.entity';
 import { Repository } from 'typeorm';
@@ -22,9 +28,14 @@ export class AuthService {
     body: RegisterDto,
   ): Promise<Result<User, HttpException>> {
     const { name, email, password }: RegisterDto = body;
+    Logger.debug(
+      `Executing registration request: ${JSON.stringify({ name, email })}`,
+    );
+
     let user: User = await this.repository.findOne({ where: { email } });
 
     if (user) {
+      Logger.warn(`Cannot register new user, ${email} already exists`);
       return Result.error(new HttpException('Conflict', HttpStatus.CONFLICT));
     }
 
@@ -42,11 +53,14 @@ export class AuthService {
 
   public async login(body: LoginDto): Promise<Result<string, HttpException>> {
     const { email, password }: LoginDto = body;
+    Logger.debug(`Executing login request: ${JSON.stringify({ email })}`);
+
     const user: User = await this.repository.findOne({
       where: { email },
     });
 
     if (!user) {
+      Logger.warn(`Rejecting login request, user ${email} not found.`);
       return Result.error(
         new HttpException('No user found', HttpStatus.NOT_FOUND),
       );
@@ -58,12 +72,16 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
+      Logger.warn(
+        `Rejecting login request, password for ${email} not matched.`,
+      );
       return Result.error(
         new HttpException('No user found', HttpStatus.NOT_FOUND),
       );
     }
 
     if (!user.verified) {
+      Logger.warn(`Rejecting login request, user ${email} not verified.`);
       return Result.error(
         new HttpException('User not yet verified', HttpStatus.FORBIDDEN),
       );
@@ -75,6 +93,7 @@ export class AuthService {
   }
 
   public async refresh(user: User): Promise<Result<string, HttpException>> {
+    Logger.debug(`Executing refresh request: ${JSON.stringify(user)}`);
     this.repository.update(user.id, { lastLoginAt: new Date() });
 
     return Result.ok(this.helper.generateToken(user));
