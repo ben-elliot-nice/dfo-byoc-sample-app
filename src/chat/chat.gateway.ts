@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Inject, Logger } from '@nestjs/common';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -8,6 +8,7 @@ import {
   OnGatewayInit,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { ChatService } from './chat.service';
 
 @WebSocketGateway({
   cors: {
@@ -17,6 +18,9 @@ import { Server, Socket } from 'socket.io';
 export class ChatGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  @Inject(ChatService)
+  private readonly chatService;
+
   private logger: Logger = new Logger('ChatGateway');
 
   @WebSocketServer()
@@ -26,9 +30,11 @@ export class ChatGateway
   async afterInit(server: Server) {
     this.logger.log('Initialized');
     // console.log(server);
+    this.chatService.socket = server;
   }
 
-  async handleConnection(client: Socket) {
+  async handleConnection(socket: Socket) {
+    console.log(socket.handshake.headers);
     this.logger.log('Client Connected');
     // console.log(client);
 
@@ -37,7 +43,7 @@ export class ChatGateway
     // Notify connected clients of current users
     this.server.emit('users', this.users);
   }
-  async handleDisconnect(client: Socket) {
+  async handleDisconnect() {
     this.logger.log('Client Disconnected');
     // console.log(client);
 
