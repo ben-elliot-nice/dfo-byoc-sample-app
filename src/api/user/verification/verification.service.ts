@@ -45,7 +45,6 @@ export class VerificationService {
     if (verification) {
       return Result.ok(verification);
     } else {
-      Logger.warn(`Rejecting verification request, token ${token} not found`);
       return Result.error(
         new HttpException(
           `No verification token '${token}' found`,
@@ -172,6 +171,7 @@ export class VerificationService {
     const getVerificationResult = await this.getVerificationByToken(token);
 
     if (getVerificationResult.isError()) {
+      Logger.warn(`Rejecting verification request, token ${token} not found`);
       return Result.error(getVerificationResult.error);
     }
 
