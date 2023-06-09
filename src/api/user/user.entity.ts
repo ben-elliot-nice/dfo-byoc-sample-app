@@ -3,10 +3,12 @@ import {
   BaseEntity,
   Column,
   Entity,
+  OneToMany,
   OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Verification } from './verification/verification.entity';
+import { Integration } from '../integration/integration.entity';
 
 @Entity()
 export class User extends BaseEntity {
@@ -31,4 +33,12 @@ export class User extends BaseEntity {
 
   @OneToOne(() => Verification, (verification) => verification.user)
   public verification: Verification;
+
+  @OneToMany(
+    () => Integration,
+    (integration) => {
+      integration.user;
+    },
+  )
+  public integration: Integration;
 }
