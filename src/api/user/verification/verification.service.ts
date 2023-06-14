@@ -27,7 +27,7 @@ export class VerificationService {
   @Inject(ConfigService)
   private readonly config: ConfigService;
 
-  private async getVerificationByToken(
+  async getVerificationByToken(
     token: string,
   ): Promise<Result<Verification, string>> {
     const verification: Verification =
@@ -45,7 +45,7 @@ export class VerificationService {
     }
   }
 
-  private async removeVerification(
+  async removeVerification(
     verification: Verification,
   ): Promise<Result<null, string>> {
     const deleteResult = await this.verificationRepository.remove(verification);
@@ -58,7 +58,7 @@ export class VerificationService {
     }
   }
 
-  private async sendVerification(
+  async sendVerification(
     verification: Verification,
     user: User,
   ): Promise<Result<null, string>> {
@@ -66,6 +66,7 @@ export class VerificationService {
     const mailGunToken = this.config.get<string>('MAILGUN_API_KEY');
 
     const form = new FormData();
+    form.setBoundary('--------------------------515890814546601021194782');
     form.append('from', 'BYOC Demo Admin <noreply@mg.benelliot-nice.com>');
     form.append('to', email);
     form.append('subject', 'Welcome to the BYOC demo platform');
@@ -91,7 +92,7 @@ export class VerificationService {
     }
   }
 
-  private async generateUniqueToken(): Promise<string> {
+  async generateUniqueToken(): Promise<string> {
     // Generate a new verification token
     const token = randomBytes(35).toString('base64');
 
@@ -109,7 +110,7 @@ export class VerificationService {
     }
   }
 
-  private validateIssuedTime(verification: Verification): Result<null, string> {
+  validateIssuedTime(verification: Verification): Result<null, string> {
     if (new Date().getTime() - verification.issuedAt.getTime() > 86400000) {
       return Result.error(
         `Rejecting verification request, token ${verification.token} issued at ${verification.issuedAt} is too old`,
