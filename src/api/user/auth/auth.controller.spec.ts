@@ -52,6 +52,7 @@ describe('AuthController', () => {
 
   describe('register', () => {
     it('should return RegisterUserResponse object', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...expectedResult } = testUser;
       const response = await authController.register(testUser);
 
@@ -73,6 +74,7 @@ describe('AuthController', () => {
 
   describe('verify', () => {
     it('should return RegisterUserResponse object', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { password, ...expectedResult } = testUser;
       const body = { token };
 
