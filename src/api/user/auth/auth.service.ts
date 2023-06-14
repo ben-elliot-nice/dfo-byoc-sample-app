@@ -1,17 +1,12 @@
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '@/api/user/user.entity';
+import { VerificationService } from '@/api/user/verification/verification.service';
+import { Inject, Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RegisterDto, LoginDto } from './auth.dto';
+import { LoginRequest, RegisterUserRequest } from './auth.dto';
 import { AuthHelper } from './auth.helper';
-import { VerificationService } from '../verification/verification.service';
-import { Result } from '@/utils/result';
+import { UserAlreadyExistsException } from './exceptions/user-already-exists.exception';
+import { UserAuthFailed } from './exceptions/user-auth-failed.exception';
 
 @Injectable()
 export class AuthService {
@@ -24,10 +19,8 @@ export class AuthService {
   @Inject(VerificationService)
   private readonly verification: VerificationService;
 
-  public async register(
-    body: RegisterDto,
-  ): Promise<Result<User, HttpException>> {
-    const { name, email, password }: RegisterDto = body;
+  public async register(body: RegisterUserRequest): Promise<User> {
+    const { name, email, password }: RegisterUserRequest = body;
     Logger.debug(
       `Executing registration request: ${JSON.stringify({ name, email })}`,
     );
@@ -35,8 +28,9 @@ export class AuthService {
     let user: User = await this.repository.findOne({ where: { email } });
 
     if (user) {
-      Logger.warn(`Cannot register new user, ${email} already exists`);
-      return Result.error(new HttpException('Conflict', HttpStatus.CONFLICT));
+      throw new UserAlreadyExistsException(
+        `Cannot register new user, ${email} already exists`,
+      );
     }
 
     user = new User();
@@ -44,15 +38,15 @@ export class AuthService {
     user.name = name;
     user.email = email;
     user.password = this.helper.encodePassword(password);
-
     await this.repository.save(user);
+
     await this.verification.createVerification(user);
 
-    return Result.ok(user);
+    return user;
   }
 
-  public async login(body: LoginDto): Promise<Result<string, HttpException>> {
-    const { email, password }: LoginDto = body;
+  public async login(body: LoginRequest): Promise<string> {
+    const { email, password }: LoginRequest = body;
     Logger.debug(`Executing login request: ${JSON.stringify({ email })}`);
 
     const user: User = await this.repository.findOne({
@@ -60,9 +54,8 @@ export class AuthService {
     });
 
     if (!user) {
-      Logger.warn(`Rejecting login request, user ${email} not found.`);
-      return Result.error(
-        new HttpException('No user found', HttpStatus.NOT_FOUND),
+      throw new UserAuthFailed(
+        `Rejecting login request, user ${email} not found.`,
       );
     }
 
@@ -72,30 +65,26 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      Logger.warn(
+      throw new UserAuthFailed(
         `Rejecting login request, password for ${email} not matched.`,
-      );
-      return Result.error(
-        new HttpException('No user found', HttpStatus.NOT_FOUND),
       );
     }
 
     if (!user.verified) {
-      Logger.warn(`Rejecting login request, user ${email} not verified.`);
-      return Result.error(
-        new HttpException('User not yet verified', HttpStatus.FORBIDDEN),
+      throw new UserAuthFailed(
+        `Rejecting login request, user ${email} not verified.`,
       );
     }
 
     this.repository.update(user.id, { lastLoginAt: new Date() });
 
-    return Result.ok(this.helper.generateToken(user));
+    return this.helper.generateToken(user);
   }
 
-  public async refresh(user: User): Promise<Result<string, HttpException>> {
+  public async refresh(user: User): Promise<string> {
     Logger.debug(`Executing refresh request: ${JSON.stringify(user)}`);
     this.repository.update(user.id, { lastLoginAt: new Date() });
 
-    return Result.ok(this.helper.generateToken(user));
+    return this.helper.generateToken(user);
   }
 }
