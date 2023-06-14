@@ -1,19 +1,16 @@
-import {
-  Body,
-  Controller,
-  Inject,
-  Post,
-  ClassSerializerInterceptor,
-  UseInterceptors,
-  UseGuards,
-  Req,
-} from '@nestjs/common';
 import { User } from '@/api/user/user.entity';
-import { RegisterDto, LoginDto, VerifyDto } from './auth.dto';
+import { VerificationService } from '@/api/user/verification/verification.service';
+import { Body, Controller, Inject, Post, Req, UseGuards } from '@nestjs/common';
+import { Request } from 'express';
+import {
+  LoginRequest,
+  LoginResponse,
+  RegisterUserRequest,
+  RegisterUserResponse,
+  VerifyRequest,
+} from './auth.dto';
 import { JwtAuthGuard } from './auth.guard';
 import { AuthService } from './auth.service';
-import { Request } from 'express';
-import { VerificationService } from '../verification/verification.service';
 
 @Controller('/api/v1/auth')
 export class AuthController {
@@ -24,48 +21,33 @@ export class AuthController {
   private readonly verificationService: VerificationService;
 
   @Post('register')
-  @UseInterceptors(ClassSerializerInterceptor)
-  private async register(@Body() body: RegisterDto) {
-    const registerUserResult = await this.authService.register(body);
+  async register(
+    @Body() body: RegisterUserRequest,
+  ): Promise<RegisterUserResponse> {
+    const user = await this.authService.register(body);
 
-    if (registerUserResult.isError()) {
-      throw registerUserResult.error;
-    } else {
-      return registerUserResult.value;
-    }
+    return new RegisterUserResponse(user);
   }
 
   @Post('login')
-  private async login(@Body() body: LoginDto) {
-    const loginResult = await this.authService.login(body);
+  async login(@Body() body: LoginRequest): Promise<LoginResponse> {
+    const token = await this.authService.login(body);
 
-    if (loginResult.isError()) {
-      throw loginResult.error;
-    } else {
-      return loginResult.value;
-    }
+    return new LoginResponse(token);
   }
 
   @Post('verify')
-  private async verify(@Body() body: VerifyDto) {
-    const verificationResult = await this.verificationService.verify(body);
+  async verify(@Body() body: VerifyRequest): Promise<RegisterUserResponse> {
+    const user = await this.verificationService.verify(body);
 
-    if (verificationResult.isError()) {
-      throw verificationResult.error;
-    } else {
-      return verificationResult.value;
-    }
+    return new RegisterUserResponse(user);
   }
 
   @Post('refresh')
   @UseGuards(JwtAuthGuard)
-  private async refresh(@Req() { user }: Request): Promise<string | never> {
-    const refreshResult = await this.authService.refresh(<User>user);
+  async refresh(@Req() { user }: Request): Promise<LoginResponse> {
+    const token = await this.authService.refresh(<User>user);
 
-    if (refreshResult.isError()) {
-      throw refreshResult.error;
-    } else {
-      return refreshResult.value;
-    }
+    return new LoginResponse(token);
   }
 }

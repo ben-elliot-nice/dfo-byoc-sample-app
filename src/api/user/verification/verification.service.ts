@@ -1,12 +1,6 @@
 import { Result } from '@/utils/result';
 import { HttpService } from '@nestjs/axios';
-import {
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AxiosRequestConfig } from 'axios';
@@ -15,7 +9,9 @@ import * as FormData from 'form-data';
 import { Repository } from 'typeorm';
 import { User } from '../user.entity';
 import { Verification } from './verification.entity';
-import { VerifyDto } from '../auth/auth.dto';
+import { VerifyRequest } from '../auth/auth.dto';
+import { VerificationInvalidException } from './exceptions/verification-invalid.exception';
+import { VerificationTimeException } from './exceptions/verification-time.exception';
 
 @Injectable()
 export class VerificationService {
@@ -31,9 +27,9 @@ export class VerificationService {
   @Inject(ConfigService)
   private readonly config: ConfigService;
 
-  private async getVerificationByToken(
+  async getVerificationByToken(
     token: string,
-  ): Promise<Result<Verification, HttpException>> {
+  ): Promise<Result<Verification, string>> {
     const verification: Verification =
       await this.verificationRepository.findOne({
         where: { token },
@@ -45,39 +41,32 @@ export class VerificationService {
     if (verification) {
       return Result.ok(verification);
     } else {
-      return Result.error(
-        new HttpException(
-          `No verification token '${token}' found`,
-          HttpStatus.BAD_REQUEST,
-        ),
-      );
+      return Result.error(`No verification token '${token}' found`);
     }
   }
 
-  private async removeVerification(
+  async removeVerification(
     verification: Verification,
-  ): Promise<Result<null, HttpException>> {
+  ): Promise<Result<null, string>> {
     const deleteResult = await this.verificationRepository.remove(verification);
     if (deleteResult) {
       return Result.ok(null);
     } else {
-      return Result.error(
-        new HttpException(
-          `Problem removing verification with token '${verification.token}'`,
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        ),
+      throw new Error(
+        `Problem removing verification with token '${verification.token}'`,
       );
     }
   }
 
-  private async sendVerification(
+  async sendVerification(
     verification: Verification,
     user: User,
-  ): Promise<Result<null, Error>> {
+  ): Promise<Result<null, string>> {
     const { email } = user;
     const mailGunToken = this.config.get<string>('MAILGUN_API_KEY');
 
     const form = new FormData();
+    form.setBoundary('--------------------------515890814546601021194782');
     form.append('from', 'BYOC Demo Admin <noreply@mg.benelliot-nice.com>');
     form.append('to', email);
     form.append('subject', 'Welcome to the BYOC demo platform');
@@ -99,17 +88,11 @@ export class VerificationService {
       await this.http.axiosRef.request(config);
       return Result.ok(null);
     } catch (error) {
-      Logger.warn(`Failed to send welcome email to ${email}`);
-      return Result.error(
-        new HttpException(
-          `Failed to send welcome email: ${error.message}`,
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        ),
-      );
+      throw new Error(`Failed to send welcome email: ${error.message}`);
     }
   }
 
-  private async generateUniqueToken(): Promise<string> {
+  async generateUniqueToken(): Promise<string> {
     // Generate a new verification token
     const token = randomBytes(35).toString('base64');
 
@@ -117,37 +100,33 @@ export class VerificationService {
     const existingVerificationResult = await this.getVerificationByToken(token);
 
     if (existingVerificationResult.isOk()) {
+      Logger.debug(
+        `Verification request with token ${token} already exists, generating another`,
+      );
       return await this.generateUniqueToken();
     } else {
+      Logger.debug(`Generated token ${token} is unique`);
       return token;
     }
   }
 
-  private validateIssuedTime(
-    verification: Verification,
-  ): Result<null, HttpException> {
+  validateIssuedTime(verification: Verification): Result<null, string> {
     if (new Date().getTime() - verification.issuedAt.getTime() > 86400000) {
-      Logger.warn(
-        `Rejecting verification request, token ${verification.token} issued at ${verification.issuedAt} is too old`,
-      );
       return Result.error(
-        new HttpException(
-          'Verification Token Timed Out',
-          HttpStatus.BAD_REQUEST,
-        ),
+        `Rejecting verification request, token ${verification.token} issued at ${verification.issuedAt} is too old`,
       );
     } else {
       return Result.ok(null);
     }
   }
 
-  public async createVerification(user: User): Promise<Result<null, Error>> {
+  public async createVerification(user: User): Promise<Verification> {
     // check to see if this user has any existing verifications.
     const existingVerification = user.verification;
 
     // Remove the verification if it exists.
     if (existingVerification) {
-      await this.verificationRepository.remove(existingVerification);
+      await this.removeVerification(existingVerification);
     }
 
     // Generate a new verification token
@@ -160,10 +139,12 @@ export class VerificationService {
     await this.verificationRepository.save(verification);
 
     // Send verification
-    return await this.sendVerification(verification, user);
+    await this.sendVerification(verification, user);
+
+    return verification;
   }
 
-  public async verify(body: VerifyDto): Promise<Result<User, HttpException>> {
+  public async verify(body: VerifyRequest): Promise<User> {
     const { token } = body;
     Logger.debug(`Executing verification request for token: ${token}`);
 
@@ -171,8 +152,7 @@ export class VerificationService {
     const getVerificationResult = await this.getVerificationByToken(token);
 
     if (getVerificationResult.isError()) {
-      Logger.warn(`Rejecting verification request, token ${token} not found`);
-      return Result.error(getVerificationResult.error);
+      throw new VerificationInvalidException(getVerificationResult.error);
     }
 
     // Check verification is within allowed time
@@ -180,7 +160,7 @@ export class VerificationService {
     const validateIssuedTimeResult = this.validateIssuedTime(verification);
 
     if (validateIssuedTimeResult.isError()) {
-      return Result.error(validateIssuedTimeResult.error);
+      throw new VerificationTimeException(validateIssuedTimeResult.error);
     }
 
     // Update relevant table details.
@@ -189,6 +169,6 @@ export class VerificationService {
     await this.userRepository.save(user);
     await this.removeVerification(verification);
 
-    return Result.ok(user);
+    return user;
   }
 }
