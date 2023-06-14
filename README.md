@@ -13,3 +13,14 @@ What we need
 ## Talk To
 - Vincent
 - Hugh Smith (CXone Agent)
+
+
+
+## Mission statement for refactor
+- Controllers should handle http responsibility
+  - Take a DTO validate it (handled automatically)
+  - Call relevant services
+  - Exception Filter should manage handling Error type to Http status exception and log any errors not pre-mapped
+  - Construct Response DTO for return to user.
+- Services should handle only the business logic of pulling together backend systems, not any HTTP stuff.
+- Everything should be tested.
