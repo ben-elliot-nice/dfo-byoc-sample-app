@@ -7,8 +7,6 @@ import { Request } from 'express';
 
 describe('AuthController', () => {
   let authController: AuthController;
-  let authService: AuthService;
-  let verificationService: VerificationService;
   let testUser;
   let testEntity: User;
   let token: string;
@@ -50,17 +48,12 @@ describe('AuthController', () => {
     }).compile();
 
     authController = moduleRef.get<AuthController>(AuthController);
-    authService = moduleRef.get<AuthService>(AuthService);
-    // verificationService =
-    //   moduleRef.get<VerificationService>(VerificationService);
   });
 
   describe('register', () => {
     it('should return RegisterUserResponse object', async () => {
       const { password, ...expectedResult } = testUser;
       const response = await authController.register(testUser);
-
-      console.log(response);
 
       expect(response).toEqual(expectedResult);
     });
