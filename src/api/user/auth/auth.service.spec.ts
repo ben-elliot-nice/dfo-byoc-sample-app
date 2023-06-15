@@ -1,22 +1,22 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '@/api/user/user.entity';
-import { AuthService } from './auth.service';
+import { UserAuthService } from './auth.service';
 import { VerificationService } from '@/api/user/verification/verification.service';
-import { AuthHelper } from './auth.helper';
+import { UserAuthHelper } from './auth.helper';
 import { RegisterUserRequest, LoginRequest } from './auth.dto';
 import { UserAlreadyExistsException, UserAuthFailed } from './exceptions';
 import { Repository } from 'typeorm';
 
-describe('AuthService', () => {
-  let authService: AuthService;
-  let authHelper: AuthHelper;
+describe('UserAuthService', () => {
+  let authService: UserAuthService;
+  let authHelper: UserAuthHelper;
   let userRepository: Repository<User>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        AuthService,
+        UserAuthService,
         {
           provide: getRepositoryToken(User),
           useValue: {
@@ -26,7 +26,7 @@ describe('AuthService', () => {
           },
         },
         {
-          provide: AuthHelper,
+          provide: UserAuthHelper,
           useValue: {
             encodePassword: jest.fn(),
             isPasswordValid: jest.fn(),
@@ -42,8 +42,8 @@ describe('AuthService', () => {
       ],
     }).compile();
 
-    authService = module.get<AuthService>(AuthService);
-    authHelper = module.get<AuthHelper>(AuthHelper);
+    authService = module.get<UserAuthService>(UserAuthService);
+    authHelper = module.get<UserAuthHelper>(UserAuthHelper);
     userRepository = module.get<Repository<User>>(getRepositoryToken(User));
   });
 

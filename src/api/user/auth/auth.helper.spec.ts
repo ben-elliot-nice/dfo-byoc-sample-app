@@ -2,12 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { JwtService } from '@nestjs/jwt';
 import { Repository } from 'typeorm';
-import { AuthHelper } from './auth.helper';
+import { UserAuthHelper } from './auth.helper';
 import { User } from '@/api/user/user.entity';
 import * as bcrypt from 'bcryptjs';
 
-describe('AuthHelper', () => {
-  let authHelper: AuthHelper;
+describe('UserAuthHelper', () => {
+  let authHelper: UserAuthHelper;
   let jwtService: JwtService;
   let repo: Repository<User>;
 
@@ -24,7 +24,7 @@ describe('AuthHelper', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        AuthHelper,
+        UserAuthHelper,
         {
           provide: JwtService,
           useValue: mockJwtService,
@@ -36,7 +36,7 @@ describe('AuthHelper', () => {
       ],
     }).compile();
 
-    authHelper = module.get<AuthHelper>(AuthHelper);
+    authHelper = module.get<UserAuthHelper>(UserAuthHelper);
     jwtService = module.get<JwtService>(JwtService);
     repo = module.get<Repository<User>>(getRepositoryToken(User));
   });

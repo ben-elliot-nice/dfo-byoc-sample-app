@@ -10,12 +10,12 @@ import {
   VerifyRequest,
 } from './auth.dto';
 import { JwtAuthGuard } from './auth.guard';
-import { AuthService } from './auth.service';
+import { UserAuthService } from './auth.service';
 
 @Controller('/api/v1/auth')
-export class AuthController {
-  @Inject(AuthService)
-  private readonly authService: AuthService;
+export class UserAuthController {
+  @Inject(UserAuthService)
+  private readonly authService: UserAuthService;
 
   @Inject(VerificationService)
   private readonly verificationService: VerificationService;

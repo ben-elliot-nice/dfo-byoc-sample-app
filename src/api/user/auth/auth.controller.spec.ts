@@ -1,12 +1,12 @@
 import { Test } from '@nestjs/testing';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { UserAuthController } from './auth.controller';
+import { UserAuthService } from './auth.service';
 import { VerificationService } from '@/api/user/verification/verification.service';
 import { User } from '../user.entity';
 import { Request } from 'express';
 
-describe('AuthController', () => {
-  let authController: AuthController;
+describe('UserAuthController', () => {
+  let authController: UserAuthController;
   let testUser;
   let testEntity: User;
   let token: string;
@@ -28,10 +28,10 @@ describe('AuthController', () => {
     token = 'jwt.token';
 
     const moduleRef = await Test.createTestingModule({
-      controllers: [AuthController],
+      controllers: [UserAuthController],
       providers: [
         {
-          provide: AuthService,
+          provide: UserAuthService,
           useValue: {
             register: jest.fn().mockResolvedValue(testEntity),
             login: jest.fn().mockResolvedValue(token),
@@ -47,7 +47,7 @@ describe('AuthController', () => {
       ],
     }).compile();
 
-    authController = moduleRef.get<AuthController>(AuthController);
+    authController = moduleRef.get<UserAuthController>(UserAuthController);
   });
 
   describe('register', () => {

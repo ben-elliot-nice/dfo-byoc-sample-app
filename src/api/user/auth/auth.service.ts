@@ -4,17 +4,17 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { LoginRequest, RegisterUserRequest } from './auth.dto';
-import { AuthHelper } from './auth.helper';
+import { UserAuthHelper } from './auth.helper';
 import { UserAlreadyExistsException } from './exceptions/user-already-exists.exception';
 import { UserAuthFailed } from './exceptions/user-auth-failed.exception';
 
 @Injectable()
-export class AuthService {
+export class UserAuthService {
   @InjectRepository(User)
   private readonly repository: Repository<User>;
 
-  @Inject(AuthHelper)
-  private readonly helper: AuthHelper;
+  @Inject(UserAuthHelper)
+  private readonly helper: UserAuthHelper;
 
   @Inject(VerificationService)
   private readonly verification: VerificationService;

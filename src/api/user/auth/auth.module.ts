@@ -3,9 +3,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '@/api/user/user.entity';
-import { AuthController } from './auth.controller';
-import { AuthHelper } from './auth.helper';
-import { AuthService } from './auth.service';
+import { UserAuthController } from './auth.controller';
+import { UserAuthHelper } from './auth.helper';
+import { UserAuthService } from './auth.service';
 import { JwtStrategy } from './auth.strategy';
 import { ConfigService } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
@@ -25,7 +25,7 @@ import { VerificationModule } from '../verification/verification.module';
     HttpModule,
     VerificationModule,
   ],
-  controllers: [AuthController],
-  providers: [AuthService, AuthHelper, JwtStrategy],
+  controllers: [UserAuthController],
+  providers: [UserAuthService, UserAuthHelper, JwtStrategy],
 })
-export class AuthModule {}
+export class UserAuthModule {}

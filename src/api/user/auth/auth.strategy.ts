@@ -3,12 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { User } from '@/api/user/user.entity';
-import { AuthHelper } from './auth.helper';
+import { UserAuthHelper } from './auth.helper';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  @Inject(AuthHelper)
-  private readonly helper: AuthHelper;
+  @Inject(UserAuthHelper)
+  private readonly helper: UserAuthHelper;
 
   constructor(@Inject(ConfigService) config: ConfigService) {
     super({

@@ -11,7 +11,7 @@ import { User } from '@/api/user/user.entity';
 import * as bcrypt from 'bcryptjs';
 
 @Injectable()
-export class AuthHelper {
+export class UserAuthHelper {
   @InjectRepository(User)
   private readonly repository: Repository<User>;
 
