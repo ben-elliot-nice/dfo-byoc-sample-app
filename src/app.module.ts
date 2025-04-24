@@ -13,7 +13,7 @@ const envFilePath: string = getEnvPath(`${__dirname}/common/envs`);
     ConfigModule.forRoot({ envFilePath, isGlobal: true }),
     TypeOrmModule.forRootAsync({ useClass: TypeOrmConfigService }),
     ApiModule,
-    // DfoModule,
+    DfoModule,
   ],
   controllers: [],
   providers: [],

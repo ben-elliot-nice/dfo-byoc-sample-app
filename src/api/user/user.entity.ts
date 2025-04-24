@@ -39,6 +39,9 @@ export class User extends BaseEntity {
     (integration) => {
       integration.user;
     },
+    {
+      cascade: true,
+    },
   )
-  public integration: Integration;
+  public integrations: Integration[];
 }
